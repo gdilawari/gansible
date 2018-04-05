@@ -1,0 +1,85 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy WordPress on EC2
+Parameters:
+  VpcID:
+    Description: The VPC to deploy to
+    Type: String
+    Default: {{ shared_vpc_id }}
+  SubnetID:
+    Description: The Subnet to deploy to
+    Type: String
+    Default: {{ public_subnet_b }}
+  SgID:
+    Description: The Security Group to assign the instance
+    Type: String
+    Default: {{ security_group_id }}
+  mysqlRootPass:
+    Description: MySQL Root Password
+    NoEcho: 'true'
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: "mysql_root_pass"
+  mysqlWordPressPass:
+    Description: Application MySQL Password
+    NoEcho: 'true'
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: "mysql_wordpress_pass"
+  wordpressAdminPass:
+    Description: WordPress Admin Password
+    NoEcho: 'true'
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: "wordpress_admin_pass"
+  wordpressAdminEmail:
+    Description: WordPress Admin Email
+    NoEcho: 'true'
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: "wordpress_admin_email"
+
+Resources:
+  WordpressInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: "ami-1853ac65" 
+      InstanceType: "t2.micro"
+      KeyName: "gianrean1"
+      Tags:
+      - Key: "Name"
+        Value: "wordpress-instance"
+      SubnetId: !Ref SubnetID
+      SecurityGroupIds:
+      - !Ref SgID 
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeType: "gp2"
+            DeleteOnTermination: "true"
+            VolumeSize: 50
+      IamInstanceProfile: "gianreaniam"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y update; yum -y install httpd24 php56 php56-mysqlnd mysql-server mysql
+          chkconfig httpd on; chkconfig mysqld on
+          service mysqld start; service httpd start
+          /usr/libexec/mysql55/mysqladmin -u root password ${mysqlRootPass}
+          /usr/bin/mysql -e "CREATE DATABASE wordpress" -p${mysqlRootPass}
+          /usr/bin/mysql -e "grant all privileges on wordpress.* to 'wordpress'@'localhost' identified by '${mysqlWordPressPass}'" -p${mysqlRootPass}
+          wget https://wordpress.org/latest.tar.gz
+          tar -xvzf latest.tar.gz; rm -rf /var/www/html; mv wordpress /var/www/html; chown -R apache:apache /var/www/html
+          pubip="$(curl http://169.254.169.254/latest/meta-data/public-ipv4/)"
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          mv wp-cli.phar /usr/bin/wp
+          sudo -u apache /usr/bin/wp core config --path=/var/www/html --dbname=wordpress --dbuser=wordpress --dbpass=${mysqlWordPressPass} --extra-php <<PHP
+          define('WP_DEBUG', true);
+          define('WP_DEBUG_LOG', true);
+          define('WP_DEBUG_DISPLAY', true);
+          define('WP_MEMORY_LIMIT', '256M');
+          PHP
+          sudo -u apache /usr/bin/wp core install --path=/var/www/html --title="Demo Site" --url=http://$pubip --admin_user=admin --admin_password=${wordpressAdminPass} --admin_email=${wordpressAdminEmail}
+
+
+
+  
+
+

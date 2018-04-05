@@ -1,0 +1,40 @@
+---
+- name: set proper template and artefacts direcory
+  set_fact:
+    template_dir: "./roles/wordpress/templates"
+
+- name: Get stack information for "{{ master_stack_name }}" before execution
+  cloudformation_facts:
+    stack_name: "{{ master_stack_name }}"
+    all_facts: true
+  ignore_errors: true
+
+- name: set VPC stack facts
+  set_fact:
+    public_subnet_b: "{{ cloudformation[master_stack_name].stack_resources.SubnetPublicSharedB }}"
+    shared_vpc_id: "{{ cloudformation[master_stack_name].stack_resources.VPC }}"
+    security_group_id: "{{ cloudformation[master_stack_name].stack_resources.SG }}"
+
+- name: Expand the CloudFormation template for future use
+  local_action: template src={{ template_dir }}/wordpress_stack.yml.j2 dest={{ template_dir }}/localhost_wordpress_stack.yaml
+
+- name: Create stack "{{ application_stack_name }}"
+  cloudformation:
+    stack_name: "{{ application_stack_name }}"
+    state: "present"
+    region: "{{ region }}"
+    template: "{{ template_dir }}/localhost_wordpress_stack.yaml"
+  when: wordpress_mode is defined and wordpress_mode == "create"
+
+- name: Destroy stack "{{ application_stack_name }}"
+  cloudformation:
+    stack_name: "{{ application_stack_name }}"
+    state: "present"
+    region: "{{ region }}"
+    template: "{{ template_dir }}/localhost_wordpress_stack.yaml"
+  when: wordpress_mode is defined and wordpress_mode == "destroy"
+
+- name: Clean up (CFN template)
+  file:
+    name: "{{ template_dir }}/localhost_wordpress_stack.yaml"
+    state: "absent"
