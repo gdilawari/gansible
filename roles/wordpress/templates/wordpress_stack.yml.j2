@@ -23,31 +23,35 @@ Parameters:
     Description: Application MySQL Password
     NoEcho: 'true'
     Type: AWS::SSM::Parameter::Value<String>
-    Default: "mysql_wordpress_pass"
+    Default: {{ mysql_wordpress_pass }}
   wordpressAdminPass:
     Description: WordPress Admin Password
     NoEcho: 'true'
     Type: AWS::SSM::Parameter::Value<String>
-    Default: "wordpress_admin_pass"
+    Default: {{ wordpress_admin_pass }}
   wordpressAdminEmail:
     Description: WordPress Admin Email
     NoEcho: 'true'
     Type: AWS::SSM::Parameter::Value<String>
-    Default: "wordpress_admin_email"
+    Default: {{ wordpress_admin_email }}
+  instanceKeypair:
+    Type: String
+    Description: SSH key pair to use for WP Instance
+    Default: {{ wpinstancekey }}
 
 Resources:
   WordpressInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: "ami-1853ac65"
+      ImageId: "ami-1853ac65" 
       InstanceType: "t2.micro"
-      KeyName: "gianrean1"
+      KeyName: !Ref instanceKeypair
       Tags:
       - Key: "Name"
         Value: "wordpress-instance"
       SubnetId: !Ref SubnetID
       SecurityGroupIds:
-      - !Ref SgID
+      - !Ref SgID 
       BlockDeviceMappings:
         - DeviceName: "/dev/xvda"
           Ebs:
@@ -77,3 +81,4 @@ Resources:
           define('WP_MEMORY_LIMIT', '256M');
           PHP
           sudo -u apache /usr/bin/wp core install --path=/var/www/html --title="Demo Site" --url=http://$pubip --admin_user=admin --admin_password=${wordpressAdminPass} --admin_email=${wordpressAdminEmail}
+
