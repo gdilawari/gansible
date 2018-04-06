@@ -14,11 +14,10 @@
     public_subnet_b: "{{ cloudformation[master_stack_name].stack_resources.SubnetPublicSharedB }}"
     shared_vpc_id: "{{ cloudformation[master_stack_name].stack_resources.VPC }}"
     security_group_id: "{{ cloudformation[master_stack_name].stack_resources.SG }}"
-    wordpress_admin_email: "{{ master_stack_name }}"_wordpress_admin_email
-    wordpress_admin_pass: "{{ master_stack_name }}"_wordpress_admin_pass
-    mysql_wordpress_pass: "{{ master_stack_name }}"_mysql_wordpress_pass
-    mysql_root_pass: "{{ master_stack_name }}"_mysql_root_pass
-    wordpress_instance_name: "{{ master_stack_name }}"-wordpress-instance
+    wordpress_admin_email: "{{ master_stack_name }}_wordpress_admin_email"
+    wordpress_admin_pass: "{{ master_stack_name }}_wordpress_admin_pass"
+    mysql_wordpress_pass: "{{ master_stack_name }}_mysql_wordpress_pass"
+    mysql_root_pass: "{{ master_stack_name }}_mysql_root_pass"
 
 - name: Expand the CloudFormation template for future use
   local_action: template src={{ template_dir }}/wordpress_stack.yml.j2 dest={{ template_dir }}/localhost_wordpress_stack.yaml
