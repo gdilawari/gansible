@@ -18,7 +18,7 @@ Parameters:
     Description: MySQL Root Password
     NoEcho: 'true'
     Type: AWS::SSM::Parameter::Value<String>
-    Default: "mysql_root_pass"
+    Default: {{ mysql_root_pass }}
   mysqlWordPressPass:
     Description: Application MySQL Password
     NoEcho: 'true'
@@ -38,6 +38,9 @@ Parameters:
     Type: String
     Description: SSH key pair to use for WP Instance
     Default: {{ wpinstancekey }}
+  instanceName:
+    Type: String
+    Default: {{ wordpress_instance_name }}
 
 Resources:
   WordpressInstance:
@@ -48,7 +51,7 @@ Resources:
       KeyName: !Ref instanceKeypair
       Tags:
       - Key: "Name"
-        Value: "wordpress-instance"
+        Value: !Ref instanceName
       SubnetId: !Ref SubnetID
       SecurityGroupIds:
       - !Ref SgID 
