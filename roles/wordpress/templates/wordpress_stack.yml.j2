@@ -39,15 +39,15 @@ Resources:
   WordpressInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: "ami-1853ac65" 
+      ImageId: "ami-1853ac65"
       InstanceType: "t2.micro"
-      KeyName: "ChangeThisKeyChangeThisKey"
+      KeyName: "gianrean1"
       Tags:
       - Key: "Name"
         Value: "wordpress-instance"
       SubnetId: !Ref SubnetID
       SecurityGroupIds:
-      - !Ref SgID 
+      - !Ref SgID
       BlockDeviceMappings:
         - DeviceName: "/dev/xvda"
           Ebs:
@@ -77,9 +77,3 @@ Resources:
           define('WP_MEMORY_LIMIT', '256M');
           PHP
           sudo -u apache /usr/bin/wp core install --path=/var/www/html --title="Demo Site" --url=http://$pubip --admin_user=admin --admin_password=${wordpressAdminPass} --admin_email=${wordpressAdminEmail}
-
-
-
-  
-
-
