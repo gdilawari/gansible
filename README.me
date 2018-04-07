@@ -30,8 +30,13 @@ solution happen. Good part of Ansible is that it is agent-less.
 
 The following Cloud Formation Template starts the AWS stack:
 
+Before running the below Cloud Formation template to create a stack, please
+make sure that IAM role "wordpressiam" has been created in your account in AWS.
 
-AWSTemplateFormatVersion: '2010-09-09'
+Once the EC2 in region us-east-ib has been created, you can copy the Public IP
+address and use it a browser to access the WordPress demo site.
+
+AWSTemplaFormatVersion: '2010-09-09'
 Description: >-
    This CF template creates a  VPC, Subnet A and Subnet B both are public. It creates all necessary routes and attached Internet
    gateway. It creates an EC2 and user data is used to execute rest of the commands. It loads package loader epel followed by boto3
