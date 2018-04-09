@@ -61,7 +61,6 @@ Resources:
             VolumeType: "gp2"
             DeleteOnTermination: "true"
             VolumeSize: 50
-      IamInstanceProfile: "gianreaniam"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
