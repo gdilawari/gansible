@@ -17,22 +17,21 @@ Parameters:
   mysqlRootPass:
     Description: MySQL Root Password
     NoEcho: 'true'
-    Type: AWS::SSM::Parameter::Value<String>
+    Type: String
     Default: {{ mysql_root_pass }}
   mysqlWordPressPass:
     Description: Application MySQL Password
     NoEcho: 'true'
-    Type: AWS::SSM::Parameter::Value<String>
+    Type: String
     Default: {{ mysql_wordpress_pass }}
   wordpressAdminPass:
     Description: WordPress Admin Password
     NoEcho: 'true'
-    Type: AWS::SSM::Parameter::Value<String>
+    Type: String
     Default: {{ wordpress_admin_pass }}
   wordpressAdminEmail:
     Description: WordPress Admin Email
-    NoEcho: 'true'
-    Type: AWS::SSM::Parameter::Value<String>
+    Type: String
     Default: {{ wordpress_admin_email }}
   instanceKeypair:
     Type: String
