@@ -3,26 +3,28 @@ Summary:
  This project creates a Web Instance for WordPress setup.  AWS Cloud Formation
  template that accepts user inputs as parameters and uses Configuration Management
  tool – Ansible to create the Web Instance and installs WordPress.
+
 Top level details:
 
-1.	AWS Cloud Formation template attached below as YAML code, deploys VPC,
+1.	AWS Cloud Formation template attached below (YAML), deploys VPC,
 two public subnets, internet gateway, security groups, Internet Gateway and
 EC2 (t2.micro), routing and installs Amazon Linux Ami.- Region =US-east-1
-2.	User is asked to enter several parameters relatead to WordPress and the
-securitykey. The template uses default cider for VPC and subnets but can be
-overwritten by the user.
-3.	The Cloud Formation, once the infrastructure is setup uses the UserData
+2.	User is asked to enter several parameters related to WordPress and MySQL
+admin passwords etc. and the KeyName. The template uses default cider for VPC
+and subnets but can be overwritten by the user.
+3. User is also asked to enter the Access Key and SecretKey.
+4. The Cloud Formation, once the infrastructure is setup uses the UserData
 capability to install EPEL (package loader, other necessary software and
 Ansible – Configuration management tool).
-4.	A github repository is cloned from Githib.com that contains WordPress
+5.	A github repository is cloned from Githib.com that contains WordPress
 playbook.
-5.	Ansible executes the playbook wordpress.yml.
-6.	The playbook uses wordpress_stack.yml.j2 to call AWS cloud formation
+6.	Ansible executes the playbook wordpress.yml.
+7.	The playbook uses wordpress_stack.yml.j2 to call AWS cloud formation
 to create an EC2 in Public subnet B.
-7.	Wordpress_stack template uses the EC2 UserData to load
+8.	Wordpress_stack template uses the EC2 UserData to load
 – httpd24, php56, php-56-mysqlnd mysql-server and mysql and starts the service
 mysqld and httpd. It uses wget to download wordpress latest release and
-installs it. User provided passowrds are configured for WordPress and Myql.
+installs it. User provided passwords are configured for WordPress and Myql.
 
 Note: there are several ways to use the combination of AWS and Configuration
 Management tool like Ansible and we have chosen a simple way to make the
@@ -30,18 +32,19 @@ solution happen. Good part of Ansible is that it is agent-less.
 
 The following Cloud Formation Template starts the AWS stack:
 
-Before running the below Cloud Formation template to create a stack, please
-make sure that IAM role "wordpressiam" has been created in your account in AWS.
 
 Once the EC2 in region us-east-ib has been created, you can copy the Public IP
 address and use it a browser to access the WordPress demo site.
 
-AWSTemplaFormatVersion: '2010-09-09'
+
+AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-   This CF template creates a  VPC, Subnet A and Subnet B both are public. It creates all necessary routes and attached Internet
-   gateway. It creates an EC2 and user data is used to execute rest of the commands. It loads package loader epel followed by boto3
-   and Ansible. It clones an Ansible/Wordpress git repository from Github. It then uses Ansible to execute a play-book to create an EC2
-   and download all necessary software to run Word-press blog.
+  This CF template creates a  VPC, Subnet A and Subnet B - both public. It
+  creates all necessary routes and attaches Internet gateway. It creates an EC2
+  and UserData is used to execute rest of the commands. It loads package loader
+  epel followed by boto3 and Ansible. It clones an Ansible/Wordpress git
+  repository from Github. It uses Ansible to execute a play-book to create
+  an EC2 and download all necessary software to run Word-press blog.
 
 Parameters:
   vpccidr:
@@ -88,7 +91,6 @@ Parameters:
 
   wordpressadminemail:
     Type: String
-    Default:  fake@fakenews.com
 
   wpinstancekey:
     Type: AWS::EC2::KeyPair::KeyName
@@ -97,6 +99,14 @@ Parameters:
   ansibleinstancekey:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH key pair to use for Ansible instance
+
+  accesskeyid:
+    Type: String
+    NoEcho: 'true'
+
+  secretaccesskey:
+    Type: String
+    NoEcho: 'true'
 
 Resources:
   VPC:
@@ -132,14 +142,15 @@ Resources:
     Properties:
       ImageId: ami-1853ac65  # Amazon Linux 2017.09.1 hvm
       InstanceType: t2.micro
-      IamInstanceProfile:  wordpressiam
       KeyName: !Ref ansibleinstancekey
       SecurityGroupIds:
          - !Ref SG
-      SubnetId: !Ref SubnetPublicSharedA
       Tags:
-        - Key:  "Name"
-          Value:  "EC2_creator_Ansible_WP"
+      - Key: "Name"
+        Value: !Sub
+          - ${stack}-ansible-instance
+          - { stack: !Ref 'AWS::StackName'}
+      SubnetId: !Ref SubnetPublicSharedA
       UserData:
         "Fn::Base64":
           !Sub  |
@@ -156,7 +167,9 @@ Resources:
             ln -sf /usr/local/bin/ansible-playbook /usr/bin/ansible-playbook
             git clone https://github.com/gdilawari/gansible.git
             export AWS_DEFAULT_REGION=us-east-1
-            ansible-playbook gansible/wordpress.yml -e "wordpress_mode=create" -e "master_stack_name=${AWS::StackName}" -e "application_stack_name=${AWS::StackName}-wordpress" -e "key_pair_name=${wpinstancekey}"
+            export AWS_ACCESS_KEY_ID=${accesskeyid}
+            export AWS_SECRET_ACCESS_KEY=${secretaccesskey}
+            ansible-playbook gansible/wordpress.yml -e "wordpress_mode=create" -e "master_stack_name=${AWS::StackName}" -e "application_stack_name=${AWS::StackName}-wordpress" -e "key_pair_name=${wpinstancekey}" -e "mysql_root_pass=${mysqlrootpass}" -e "mysql_wordpress_pass=${mysqlwordpress}" -e "wordpress_admin_pass=${wordpressadminpass}" -e "wordpress_admin_email=${wordpressadminemail}"
 
   S3OneBucket:
     DeletionPolicy: Retain
@@ -214,46 +227,6 @@ Resources:
     Properties:
       VpcId: !Ref VPC
 
-  MySQLRootPass:
-    Type: "AWS::SSM::Parameter"
-    Properties:
-      Name: !Sub
-        - ${stack}_mysql_root_pass
-        - { stack: !Ref 'AWS::StackName'}
-      Description: MySQL Root Password
-      Type: String
-      Value: !Ref mysqlrootpass
-
-  MySQLWordPressPass:
-    Type: "AWS::SSM::Parameter"
-    Properties:
-      Name: !Sub
-        - ${stack}_mysql_wordpress_pass
-        - { stack: !Ref 'AWS::StackName'}
-      Description: MySQL WordPress Password
-      Type: String
-      Value: !Ref mysqlwordpress
-
-  WordPressAdminEmail:
-    Type: "AWS::SSM::Parameter"
-    Properties:
-      Name: !Sub
-        - ${stack}_wordpress_admin_email
-        - { stack: !Ref 'AWS::StackName'}
-      Description: WordPress Admin Email
-      Type: String
-      Value: !Ref wordpressadminemail
-
-  WordPressAdminPass:
-    Type: "AWS::SSM::Parameter"
-    Properties:
-      Name: !Sub
-        - ${stack}_wordpress_admin_pass
-        - { stack: !Ref 'AWS::StackName'}
-      Description: WordPress Admin Password
-      Type: String
-      Value: !Ref wordpressadminpass
-
 Outputs:
   vpcid:
     Description: ID of Shared Infrastructure VPC
@@ -262,3 +235,4 @@ Outputs:
   publicroutetable:
     Description: ID of Public Route Table
     Value: !Ref RouteTablePublic
+    
